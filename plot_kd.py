@@ -4,20 +4,20 @@ from matplotlib import pyplot as plt
 
 n_exp = 5
 n_trees = 5
-n_simulations = 10000
-k_heat = [2, 4, 6, 8]  #[50, 100, 200]
-d_heat = [1, 2, 3, 4, 5] # [50, 100, 200]
+n_simulations = 1000
+k_heat = [2, 4, 6, 8]  # [50, 100, 200]
+d_heat = [1, 2, 3, 4, 5]  # [50, 100, 200]
 # k = [50, 50, 100, 100, 200, 200]
 # d = [1, 2, 1, 2, 1, 2]
 k = [2, 4, 6, 8]
 d = [1, 2, 3, 4, 5]
-exploration_coeff = .1
+exploration_coeff = 1.41
 tau = .1
 # algs = ['uct', 'ments', 'rents', 'tents']
 
-algs = ['uct', 'rents', 'tents', 'w-mcts']
+algs = ['uct', 'ments', 'rents', 'tents', 'w-mcts', 'dng']
 
-folder_name = 'logs/expl_%.2f_tau_%.2fbk' % (exploration_coeff, tau)
+folder_name = 'logs/expl_%.2f_tau_%.2f' % (exploration_coeff, tau)
 
 # PLOTS
 plt.figure()
@@ -88,7 +88,7 @@ for kk, dd in zip(k, d):
         plt.subplot(3, len(k), count_plot + 1 + i * len(k))
         plt.grid()
         plt.ylim(0, plots[i])
-        
+
     count_plot += 1
 
 plt.subplot(3, len(k), 3 * len(k) - 2)
@@ -102,7 +102,7 @@ regret = np.load(folder_name + '/regret_heatmap.npy')
 diffs = [diff, diff_uct, regret]
 titles_diff = [r'$\varepsilon_\Omega$', r'$\varepsilon_{UCT}$', 'R']
 for t, d in zip(titles_diff, diffs):
-    fig, axs = plt.subplots(nrows=2, ncols=2)
+    fig, axs = plt.subplots(nrows=2, ncols=3)
     fig.suptitle(t, fontsize='xx-large')
     max_d = d.max()
     for i, ax in enumerate(axs.flat):

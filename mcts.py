@@ -10,10 +10,18 @@ class MCTS:
         self._algorithm = algorithm
         self._tau = tau
         self._alpha = alpha
-        self._gamma = gamma # discount factor
+        self._gamma = gamma  # discount factor
         self._update_type = update_type
 
     def run(self, tree_env, n_simulations):
+        """Runs a given number of MCTS simulations on the tree environment, keeping track of root values and regret.
+
+        Args:
+            tree_env: The tree environment on which to run MCTS.
+            n_simulations: The number of simulations to run.
+        Returns:
+            An array of root values and cumulative regret for each simulation.
+        """
         v_hat = np.zeros(n_simulations)
         regret = np.zeros_like(v_hat)
         for i in range(n_simulations):
@@ -42,12 +50,13 @@ class MCTS:
                 integrals[j] = p
             else:
                 x[:, j] = np.linspace(lower_limit[j], upper_limit[j], n_trapz)
-                y[:, j] = norm.pdf(x[:, j],loc=mean_list[j], scale=sigma_list[j] + _epsilon)
+                y[:, j] = norm.pdf(x[:, j], loc=mean_list[j], scale=sigma_list[j] + _epsilon)
                 for k in range(n_actions):
                     if k != j:
                         y[:, j] *= norm.cdf(x[:, j], loc=mean_list[k], scale=sigma_list[k] + _epsilon)
-                integrals[j] = (upper_limit[j] - lower_limit[j]) / (2 * (n_trapz - 1)) * (y[0, j] + y[-1, j] + 2 * np.sum(y[1:-1, j]))
-        #print(np.sum(integrals))
+                integrals[j] = (upper_limit[j] - lower_limit[j]) / (2 * (n_trapz - 1)) * \
+                    (y[0, j] + y[-1, j] + 2 * np.sum(y[1:-1, j]))
+        # print(np.sum(integrals))
         #assert np.isclose(np.sum(integrals), 1)
         with np.errstate(divide='raise'):
             try:
@@ -59,6 +68,13 @@ class MCTS:
                 input()
 
     def _simulation(self, tree_env):
+        """Runs a single MCTS simulation on the tree.
+
+        Args:
+            tree_env: The tree environment on which to run.
+        Returns:
+            The resulting root node value and the regret.
+        """
         path = self._navigate(tree_env)
 
         leaf_node = tree_env.tree.nodes[path[-1][1]]
@@ -67,7 +83,7 @@ class MCTS:
 
         leaf_node['V'] = (leaf_node['V'] * leaf_node['N'] + reward) / (leaf_node['N'] + 1)
         leaf_node['N'] += 1
-        for e in reversed(path):
+        for step, e in enumerate(reversed(path)):
             current_node = tree_env.tree.nodes[e[0]]
             next_node = tree_env.tree.nodes[e[1]]
 
@@ -79,12 +95,12 @@ class MCTS:
                 q_variance = tree_env.tree[e[0]][e[1]]['q_variance']
 
                 t = tree_env.tree[e[0]][e[1]]['N']
-                _alpha = 1./np.power(t,0.2)
+                _alpha = 1./np.power(t, 0.2)
 
                 tree_env.tree[e[0]][e[1]]['q_mean'] = _alpha * q_mean + \
-                                                      (1 - _alpha) * (reward + self._gamma * q_mean)
+                    (1 - _alpha) * (reward + self._gamma * q_mean)
                 tree_env.tree[e[0]][e[1]]['q_variance'] = _alpha * q_variance + \
-                                                        (1 - _alpha) * (self._gamma * q_variance)
+                    (1 - _alpha) * (self._gamma * q_variance)
 
                 out_edges = [e for e in tree_env.tree.edges(e[0])]
 
@@ -104,6 +120,14 @@ class MCTS:
                     tree_env.tree[e[0]][e[1]]['v_mean'] = np.sum(mean_next_all * prob)
                     tree_env.tree[e[0]][e[1]]['v_variance'] = np.sum(variance_next_all * prob)
 
+            elif self._algorithm == "dng":
+                cumulative_reward = self._gamma**step * reward
+                current_node["alpha"] += .5
+                current_node["beta"] += .5 * (current_node["lambda"]*(cumulative_reward - current_node["mu"])**2
+                                              / (current_node["lambda"] + 1))
+                current_node["mu"] = ((current_node["lambda"]*current_node["mu"] + cumulative_reward)
+                                      / (current_node["lambda"] + 1))
+                current_node["lambda"] += 1
 
             elif self._algorithm == 'uct':
                 current_node['V'] = (current_node['V'] * current_node['N'] +
@@ -144,6 +168,8 @@ class MCTS:
         v_hat = 0
         if self._algorithm == 'w-mcts':
             v_hat = tree_env.tree.nodes[0]['v_mean']
+        elif self._algorithm == "dng":
+            v_hat = tree_env.tree.nodes[0]["mu"]
         else:
             v_hat = tree_env.tree.nodes[0]['V']
 
@@ -153,6 +179,14 @@ class MCTS:
         return v_hat, regret
 
     def _navigate(self, tree_env):
+        """Navigates the tree from the root node until reaching a leaf node, using an algorithm-dependent select policy.
+
+        Args:
+            tree_env: The tree environment on which to operate.
+        Returns:
+            An array of tuples, each containing the current state and the next state at each step of the path taken
+            through the tree.
+        """
         state = tree_env.state
         action = self._select(tree_env, state)
         next_state = tree_env.step(action)
@@ -162,6 +196,14 @@ class MCTS:
             return [[state, next_state]]
 
     def _select(self, tree_env, state):
+        """Policy for selecting nodes of the tree.
+
+        Args:
+            tree_env: The tree environment on which to operate.
+            state: The state in which to select an action.
+        Returns:
+            The action that was chosen.
+        """
         out_edges = [e for e in tree_env.tree.edges(state)]
         n_state_action = np.array(
             [tree_env.tree[e[0]][e[1]]['N'] for e in out_edges])
@@ -169,7 +211,7 @@ class MCTS:
             [tree_env.tree[e[0]][e[1]]['Q'] for e in out_edges])
 
         if self._algorithm == 'w-mcts':
-            ##current implementation is ucb
+            # current implementation is ucb
             mean_array = np.array(
                 [tree_env.tree[e[0]][e[1]]['q_mean'] for e in out_edges])
 
@@ -187,6 +229,24 @@ class MCTS:
             chosen_action = np.random.choice(np.argwhere(ucb_values == np.max(ucb_values)).ravel())
             probs = np.zeros_like(ucb_values)
             probs[chosen_action] += 1
+
+            return chosen_action
+
+        elif self._algorithm == "dng":
+            qvalues = []
+            for edge in out_edges:
+                # Sample from normal gamma distribution
+                mu = tree_env.tree.nodes[edge[1]]["mu"]
+                alpha = tree_env.tree.nodes[edge[1]]["alpha"]
+                beta = tree_env.tree.nodes[edge[1]]["beta"]
+
+                tau = np.random.gamma(alpha, beta)
+                x = np.random.normal(mu, np.sqrt(1/tau))
+
+                qvalues.append(x)
+            qvalues = np.array(qvalues)
+
+            chosen_action = np.random.choice(np.argwhere(qvalues == np.max(qvalues)).ravel())
 
             return chosen_action
 

@@ -25,7 +25,7 @@ def experiment(algorithm, tree):
 
 n_exp = 5
 n_trees = 5
-n_simulations = 10000
+n_simulations = 1000
 # n_simulations = 1000
 # ks = [2, 4, 6, 8, 10, 12, 14, 16]
 ks = [2, 4, 6, 8]
@@ -38,7 +38,7 @@ exploration_coeff = 1.41
 tau = .1
 alpha = .2
 gamma = 1.
-algorithms = {'uct': 'UCT', 'ments': 'MENTS', 'rents': 'RENTS', 'tents': 'TENTS', 'w-mcts': 'W-MCTS'}
+algorithms = {'uct': 'UCT', 'ments': 'MENTS', 'rents': 'RENTS', 'tents': 'TENTS', 'w-mcts': 'W-MCTS', 'dng': 'DNG'}
 
 folder_name = './logs/expl_%.2f_tau_%.2f' % (exploration_coeff, tau)
 
@@ -58,7 +58,7 @@ for x, k in enumerate(ks):
                         tree = pickle.load(f)
                 except FileNotFoundError as err:
                     print('Tree not found! Creating new tree...')
-                    tree = SyntheticTree(k, d, alg, tau,alpha,gamma)
+                    tree = SyntheticTree(k, d, alg, tau, alpha, gamma)
                     with open(subfolder_name + '/tree%d_%s.pkl' % (w, alg), 'wb') as f:
                         pickle.dump(tree, f)
 

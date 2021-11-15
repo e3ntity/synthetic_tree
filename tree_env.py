@@ -6,6 +6,15 @@ from scipy.special import logsumexp
 
 class SyntheticTree:
     def __init__(self, k, d, algorithm, tau, alpha, gamma):
+        """
+        Args:
+            k (int): Branching factor of the tree.
+            d (int): Height of the tree.
+            algorithm (string): The algorithm to build the tree for.
+            tau (float):
+            alpha (float):
+            gamma (float):
+        """
         self._k = k
         self._d = d
         self._algorithm = algorithm
@@ -31,7 +40,11 @@ class SyntheticTree:
             if algorithm == "w-mcts":
                 self._tree.nodes[n]['v_mean'] = 0.
                 self._tree.nodes[n]['v_variance'] = 0.
-
+            elif algorithm == "dng":
+                self._tree.nodes[n]["mu"] = 0.
+                self._tree.nodes[n]["lambda"] = 1e-2
+                self._tree.nodes[n]["alpha"] = 1.
+                self._tree.nodes[n]["beta"] = 100.
 
         self.leaves = [x for x in self._tree.nodes() if
                        self._tree.out_degree(x) == 0 and self._tree.in_degree(x) == 1]
@@ -55,6 +68,13 @@ class SyntheticTree:
         self.reset()
 
     def reset(self, state=None):
+        """Resets the active state of the tree.
+
+        Args:
+            state (int): The state to reset the tree to. Defaults to the root state.
+        Returns:
+            The new active state of the tree.
+        """
         if state is not None:
             self.state = state
         else:
@@ -63,12 +83,29 @@ class SyntheticTree:
         return self.state
 
     def step(self, action):
+        """Advances the active state of the tree.
+
+        Args:
+            action (int): The action to take in the currently active state.
+        Returns:
+            The new active state of the tree.
+        """
         edges = [e for e in self._tree.edges(self.state)]
         self.state = edges[action][1]
 
         return self.state
 
     def rollout(self, state):
+        """Computes the return of a random rollout starting in the given state.
+
+        Simulates a random rollout by taking a sample from a normal distribution centerd at the pre-computed mean
+        return of the given state.
+
+        Args:
+            state (int): The state from which to rollout.
+        Returns:
+            The return of the rollout.
+        """
         return np.random.normal(self._tree.nodes[state]['mean'], scale=1.)
         # return np.random.normal(self._tree.nodes[state]['mean'], scale=.05)
 
@@ -77,6 +114,11 @@ class SyntheticTree:
         return self._tree
 
     def _compute_mean(self, node=0, weight=0):
+        """Recursively computes and assigns the mean returns at each leaf node of the tree.
+
+        Cmputes the cumulative sum of rewards when going from the root node to each leaf node. These are then assigned
+        to each respective leaf node as it's mean return.
+        """
         if node not in self.leaves:
             for e in self._tree.edges(node):
                 self._compute_mean(e[1],
@@ -85,6 +127,7 @@ class SyntheticTree:
             self._tree.nodes[node]['mean'] = weight
 
     def _assign_priors_maxs(self, node=0):
+        """Recursively computes and assigns the mean returns and priors at each intermediate node in the tree."""
         successors = [n for n in self._tree.successors(node)]
         if successors[0] not in self.leaves:
             means = np.array([self._assign_priors_maxs(s) for s in successors])
@@ -101,6 +144,11 @@ class SyntheticTree:
 
     def _solver(self, node=0):
         if self._algorithm == 'w-mcts':
+            successors = [n for n in self._tree.successors(node)]
+            means = np.array([self._tree.nodes[s]['mean'] for s in successors])
+
+            return self.max_mean, means
+        elif self._algorithm == 'dng':
             successors = [n for n in self._tree.successors(node)]
             means = np.array([self._tree.nodes[s]['mean'] for s in successors])
 
@@ -143,7 +191,7 @@ class SyntheticTree:
                     kappa = np.array(kappa)
 
                     sparse_max = means_tau[kappa] ** 2 / 2 - (
-                            means_tau[kappa].sum() - 1) ** 2 / (2 * len(kappa) ** 2)
+                        means_tau[kappa].sum() - 1) ** 2 / (2 * len(kappa) ** 2)
                     sparse_max = sparse_max.sum() + .5
 
                     return sparse_max
