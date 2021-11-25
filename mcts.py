@@ -5,11 +5,12 @@ from scipy.stats import norm
 
 
 class MCTS:
-    def __init__(self, exploration_coeff, algorithm, tau, alpha, gamma, update_type):
+    def __init__(self, exploration_coeff, algorithm, tau, alpha, step_size,gamma, update_type):
         self._exploration_coeff = exploration_coeff
         self._algorithm = algorithm
         self._tau = tau
         self._alpha = alpha
+        self._step_size = step_size
         self._gamma = gamma  # discount factor
         self._update_type = update_type
 
@@ -83,6 +84,14 @@ class MCTS:
 
         leaf_node['V'] = (leaf_node['V'] * leaf_node['N'] + reward) / (leaf_node['N'] + 1)
         leaf_node['N'] += 1
+
+        if self._algorithm == "w-mcts":
+            leaf_node['v_mean'] = (leaf_node['v_mean'] * leaf_node['N'] + reward) / (leaf_node['N'] + 1)
+        if leaf_node['N'] == 1:
+            leaf_node['v_variance'] = 1.0
+        else:
+            leaf_node['v_variance'] = (leaf_node['v_variance'] * (leaf_node['N'] - 1) + (reward - leaf_node['v_mean'])**2) / leaf_node['N']
+
         for step, e in enumerate(reversed(path)):
             current_node = tree_env.tree.nodes[e[0]]
             next_node = tree_env.tree.nodes[e[1]]
@@ -93,14 +102,16 @@ class MCTS:
             if self._algorithm == 'w-mcts':
                 q_mean = tree_env.tree[e[0]][e[1]]['q_mean']
                 q_variance = tree_env.tree[e[0]][e[1]]['q_variance']
+                v_mean = next_node['v_mean']
+                v_variance = next_node['v_variance']
 
                 t = tree_env.tree[e[0]][e[1]]['N']
-                _alpha = 1./np.power(t, 0.2)
+                _step_size = 1./np.power(t, self._step_size)
 
-                tree_env.tree[e[0]][e[1]]['q_mean'] = _alpha * q_mean + \
-                    (1 - _alpha) * (reward + self._gamma * q_mean)
-                tree_env.tree[e[0]][e[1]]['q_variance'] = _alpha * q_variance + \
-                    (1 - _alpha) * (self._gamma * q_variance)
+                tree_env.tree[e[0]][e[1]]['q_mean'] = _step_size * q_mean + \
+                    (1 - _step_size) * (reward + self._gamma * v_mean)
+                tree_env.tree[e[0]][e[1]]['q_variance'] = _step_size * q_variance + \
+                    (1 - _step_size) * (self._gamma * v_variance)
 
                 out_edges = [e for e in tree_env.tree.edges(e[0])]
 
@@ -128,6 +139,12 @@ class MCTS:
                 current_node["mu"] = ((current_node["lambda"]*current_node["mu"] + cumulative_reward)
                                       / (current_node["lambda"] + 1))
                 current_node["lambda"] += 1
+
+            elif self._algorithm == 'power-uct':
+                out_edges = [e for e in tree_env.tree.edges(e[0])]
+                qs = np.array(
+                    [tree_env.tree[e[0]][e[1]]['Q'] for e in out_edges])
+                current_node['V'] = np.power(np.sum(np.power(qs,self._alpha)),self._alpha)
 
             elif self._algorithm == 'uct':
                 current_node['V'] = (current_node['V'] * current_node['N'] +
@@ -211,26 +228,41 @@ class MCTS:
             [tree_env.tree[e[0]][e[1]]['Q'] for e in out_edges])
 
         if self._algorithm == 'w-mcts':
-            # current implementation is ucb
-            mean_array = np.array(
-                [tree_env.tree[e[0]][e[1]]['q_mean'] for e in out_edges])
 
-            variance_array = np.array(
-                [tree_env.tree[e[0]][e[1]]['q_variance'] for e in out_edges])
+            qvalues = []
+            for edge in out_edges:
+                # Sample from normal gamma distribution
+                mu = tree_env.tree[edge[0]][edge[1]]['q_mean']
+                delta = tree_env.tree[edge[0]][edge[1]]['q_variance']
 
-            n_state = np.sum(n_state_action)
-            if n_state > 0:
-                ucb_values = mean_array + self._exploration_coeff * np.sqrt(
-                    np.log(n_state) / (n_state_action + 1e-10)
-                ) * variance_array
-            else:
-                ucb_values = np.ones(len(n_state_action)) * np.inf
+                x = np.random.normal(mu, delta)
 
-            chosen_action = np.random.choice(np.argwhere(ucb_values == np.max(ucb_values)).ravel())
-            probs = np.zeros_like(ucb_values)
-            probs[chosen_action] += 1
+                qvalues.append(x)
+            qvalues = np.array(qvalues)
+
+            chosen_action = np.random.choice(np.argwhere(qvalues == np.max(qvalues)).ravel())
 
             return chosen_action
+            # current implementation is ucb
+            # mean_array = np.array(
+            #     [tree_env.tree[e[0]][e[1]]['q_mean'] for e in out_edges])
+            #
+            # variance_array = np.array(
+            #     [tree_env.tree[e[0]][e[1]]['q_variance'] for e in out_edges])
+            #
+            # n_state = np.sum(n_state_action)
+            # if n_state > 0:
+            #     ucb_values = mean_array + self._exploration_coeff * np.sqrt(
+            #         np.log(n_state) / (n_state_action + 1e-10)
+            #     ) * variance_array
+            # else:
+            #     ucb_values = np.ones(len(n_state_action)) * np.inf
+            #
+            # chosen_action = np.random.choice(np.argwhere(ucb_values == np.max(ucb_values)).ravel())
+            # probs = np.zeros_like(ucb_values)
+            # probs[chosen_action] += 1
+            #
+            # return chosen_action
 
         elif self._algorithm == "dng":
             qvalues = []
@@ -251,6 +283,20 @@ class MCTS:
             return chosen_action
 
         elif self._algorithm == 'uct':
+            n_state = np.sum(n_state_action)
+            if n_state > 0:
+                ucb_values = qs + self._exploration_coeff * np.sqrt(
+                    np.log(n_state) / (n_state_action + 1e-10)
+                )
+            else:
+                ucb_values = np.ones(len(n_state_action)) * np.inf
+
+            chosen_action = np.random.choice(np.argwhere(ucb_values == np.max(ucb_values)).ravel())
+            probs = np.zeros_like(ucb_values)
+            probs[chosen_action] += 1
+
+            return chosen_action
+        elif self._algorithm == 'power-uct':
             n_state = np.sum(n_state_action)
             if n_state > 0:
                 ucb_values = qs + self._exploration_coeff * np.sqrt(
