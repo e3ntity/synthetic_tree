@@ -13,6 +13,7 @@ def experiment(algorithm, tree):
                 algorithm=algorithm,
                 tau=tau,
                 alpha=alpha,
+                step_size=step_size,
                 gamma=gamma,
                 update_type='mean')
 
@@ -38,6 +39,7 @@ exploration_coeff = 1.41
 tau = .1
 alpha = .2
 gamma = 1.
+step_size = 0.3
 algorithms = {'uct': 'UCT', 'ments': 'MENTS', 'rents': 'RENTS', 'tents': 'TENTS', 'w-mcts': 'W-MCTS', 'dng': 'DNG'}
 
 folder_name = './logs/expl_%.2f_tau_%.2f' % (exploration_coeff, tau)

@@ -5,7 +5,7 @@ from scipy.special import logsumexp
 
 
 class SyntheticTree:
-    def __init__(self, k, d, algorithm, tau, alpha, gamma, step_size):
+    def __init__(self, k, d, algorithm, tau, alpha, gamma):
         """
         Args:
             k (int): Branching factor of the tree.
@@ -21,7 +21,6 @@ class SyntheticTree:
         self._tau = tau
         self._alpha = alpha
         self._gamma = gamma
-        self._step_size = step_size
 
 
         self._tree = nx.balanced_tree(k, d, create_using=nx.DiGraph)

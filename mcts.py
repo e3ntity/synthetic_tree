@@ -87,10 +87,10 @@ class MCTS:
 
         if self._algorithm == "w-mcts":
             leaf_node['v_mean'] = (leaf_node['v_mean'] * leaf_node['N'] + reward) / (leaf_node['N'] + 1)
-        if leaf_node['N'] == 1:
-            leaf_node['v_variance'] = 1.0
-        else:
-            leaf_node['v_variance'] = (leaf_node['v_variance'] * (leaf_node['N'] - 1) + (reward - leaf_node['v_mean'])**2) / leaf_node['N']
+            if leaf_node['N'] == 1:
+                leaf_node['v_variance'] = 1.0
+            else:
+                leaf_node['v_variance'] = (leaf_node['v_variance'] * (leaf_node['N'] - 1) + (reward - leaf_node['v_mean'])**2) / leaf_node['N']
 
         for step, e in enumerate(reversed(path)):
             current_node = tree_env.tree.nodes[e[0]]
