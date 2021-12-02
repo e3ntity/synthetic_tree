@@ -83,14 +83,16 @@ class MCTS:
         reward = tree_env.rollout(path[-1][1])
 
         leaf_node['V'] = (leaf_node['V'] * leaf_node['N'] + reward) / (leaf_node['N'] + 1)
-        leaf_node['N'] += 1
 
         if self._algorithm == "w-mcts":
             leaf_node['v_mean'] = (leaf_node['v_mean'] * leaf_node['N'] + reward) / (leaf_node['N'] + 1)
             if leaf_node['N'] == 1:
-                leaf_node['v_variance'] = 1.0
+                leaf_node['v_variance'] = 1./np.sqrt(12)
             else:
-                leaf_node['v_variance'] = (leaf_node['v_variance'] * (leaf_node['N'] - 1) + (reward - leaf_node['v_mean'])**2) / leaf_node['N']
+                leaf_node['v_variance'] = (leaf_node['v_variance'] * leaf_node['N'] + (reward - leaf_node['v_mean'])**2) / (leaf_node['N'] + 1)
+
+        leaf_node['N'] += 1
+
 
         for step, e in enumerate(reversed(path)):
             current_node = tree_env.tree.nodes[e[0]]
@@ -123,13 +125,13 @@ class MCTS:
 
                 if self._update_type == 'max':
                     best = np.random.choice(np.argwhere(mean_next_all == np.max(mean_next_all)).ravel())
-                    tree_env.tree[e[0]][e[1]]['v_mean'] = mean_next_all[best]
-                    tree_env.tree[e[0]][e[1]]['v_variance'] = variance_next_all[best]
+                    current_node['v_mean'] = mean_next_all[best]
+                    current_node['v_variance'] = variance_next_all[best]
                 else:
                     prob = self._compute_prob_max(mean_next_all, variance_next_all)
 
-                    tree_env.tree[e[0]][e[1]]['v_mean'] = np.sum(mean_next_all * prob)
-                    tree_env.tree[e[0]][e[1]]['v_variance'] = np.sum(variance_next_all * prob)
+                    current_node['v_mean'] = np.sum(mean_next_all * prob)
+                    current_node['v_variance'] = np.sum(variance_next_all * prob)
 
             elif self._algorithm == "dng":
                 cumulative_reward = self._gamma**step * reward
@@ -229,40 +231,40 @@ class MCTS:
 
         if self._algorithm == 'w-mcts':
 
-            qvalues = []
-            for edge in out_edges:
-                # Sample from normal gamma distribution
-                mu = tree_env.tree[edge[0]][edge[1]]['q_mean']
-                delta = tree_env.tree[edge[0]][edge[1]]['q_variance']
-
-                x = np.random.normal(mu, delta)
-
-                qvalues.append(x)
-            qvalues = np.array(qvalues)
-
-            chosen_action = np.random.choice(np.argwhere(qvalues == np.max(qvalues)).ravel())
-
-            return chosen_action
-            # current implementation is ucb
-            # mean_array = np.array(
-            #     [tree_env.tree[e[0]][e[1]]['q_mean'] for e in out_edges])
+            # qvalues = []
+            # for edge in out_edges:
+            #     # Sample from normal gamma distribution
+            #     mu = tree_env.tree[edge[0]][edge[1]]['q_mean']
+            #     delta = tree_env.tree[edge[0]][edge[1]]['q_variance']
             #
-            # variance_array = np.array(
-            #     [tree_env.tree[e[0]][e[1]]['q_variance'] for e in out_edges])
+            #     x = np.random.normal(mu, delta)
             #
-            # n_state = np.sum(n_state_action)
-            # if n_state > 0:
-            #     ucb_values = mean_array + self._exploration_coeff * np.sqrt(
-            #         np.log(n_state) / (n_state_action + 1e-10)
-            #     ) * variance_array
-            # else:
-            #     ucb_values = np.ones(len(n_state_action)) * np.inf
+            #     qvalues.append(x)
+            # qvalues = np.array(qvalues)
             #
-            # chosen_action = np.random.choice(np.argwhere(ucb_values == np.max(ucb_values)).ravel())
-            # probs = np.zeros_like(ucb_values)
-            # probs[chosen_action] += 1
+            # chosen_action = np.random.choice(np.argwhere(qvalues == np.max(qvalues)).ravel())
             #
             # return chosen_action
+            # current implementation is ucb
+            mean_array = np.array(
+                [tree_env.tree[e[0]][e[1]]['q_mean'] for e in out_edges])
+
+            variance_array = np.array(
+                [tree_env.tree[e[0]][e[1]]['q_variance'] for e in out_edges])
+
+            n_state = np.sum(n_state_action)
+            if n_state > 0:
+                ucb_values = mean_array + self._exploration_coeff * np.sqrt(
+                    np.log(n_state)# / (n_state_action + 1e-10)
+                ) * variance_array
+            else:
+                ucb_values = np.ones(len(n_state_action)) * np.inf
+
+            chosen_action = np.random.choice(np.argwhere(ucb_values == np.max(ucb_values)).ravel())
+            probs = np.zeros_like(ucb_values)
+            probs[chosen_action] += 1
+
+            return chosen_action
 
         elif self._algorithm == "dng":
             qvalues = []

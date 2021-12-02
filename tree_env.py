@@ -31,16 +31,16 @@ class SyntheticTree:
             self._tree[e[0]][e[1]]['Q'] = 0.
 
             if algorithm == "w-mcts":
-                self._tree[e[0]][e[1]]['q_mean'] = 0.
-                self._tree[e[0]][e[1]]['q_variance'] = 0.
+                self._tree[e[0]][e[1]]['q_mean'] = 0.5
+                self._tree[e[0]][e[1]]['q_variance'] = 1/np.sqrt(12)
 
         for n in self._tree.nodes:
             self._tree.nodes[n]['N'] = 0
             self._tree.nodes[n]['V'] = 0.
 
             if algorithm == "w-mcts":
-                self._tree.nodes[n]['v_mean'] = 0.
-                self._tree.nodes[n]['v_variance'] = 0.
+                self._tree.nodes[n]['v_mean'] = 0.5
+                self._tree.nodes[n]['v_variance'] = 1/np.sqrt(12)
             elif algorithm == "dng":
                 self._tree.nodes[n]["mu"] = 0.
                 self._tree.nodes[n]["lambda"] = 1e-2
@@ -107,7 +107,7 @@ class SyntheticTree:
         Returns:
             The return of the rollout.
         """
-        return np.random.normal(self._tree.nodes[state]['mean'], scale=1.)
+        return np.random.normal(self._tree.nodes[state]['mean'], scale=.5)
         # return np.random.normal(self._tree.nodes[state]['mean'], scale=.05)
 
     @property

@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 
 n_exp = 5
 n_trees = 5
-n_simulations = 1000
+n_simulations = 10000
 k_heat = [2, 4, 6, 8]  # [50, 100, 200]
 d_heat = [1, 2, 3, 4, 5]  # [50, 100, 200]
 # k = [50, 50, 100, 100, 200, 200]
@@ -84,6 +84,9 @@ for kk, dd in zip(k, d):
         plt.yticks(fontsize='xx-large')
         plots = [max_diff, max_diff_uct, max_regret]
 
+    # plt.legend([alg.upper() for alg in algs], fontsize='xx-large', loc="upper center", bbox_to_anchor=(-0.3, -0.3), ncol=len(algs), frameon=False)
+
+
     for i in range(3):
         plt.subplot(3, len(k), count_plot + 1 + i * len(k))
         plt.grid()
@@ -92,7 +95,7 @@ for kk, dd in zip(k, d):
     count_plot += 1
 
 plt.subplot(3, len(k), 3 * len(k) - 2)
-plt.legend([alg.upper() for alg in algs], fontsize='xx-large', ncol=len(algs), loc=[-1.75, -.8], frameon=False)
+plt.legend([alg.upper() for alg in algs], fontsize='xx-large', loc="upper center", bbox_to_anchor=(0.3, -0.3), ncol=len(algs), frameon=False)
 
 # HEATMAPS
 diff = np.load(folder_name + '/diff_heatmap.npy')
@@ -118,8 +121,10 @@ for t, d in zip(titles_diff, diffs):
         ax.set_yticklabels(k_heat)
         im.set_clim(0, max_d)
     # cb_ax = fig.add_axes([0.7, 0.15, 0.025, 0.7])
-    # cbar = fig.colorbar(im, cax=cb_ax)
-    # for t in cbar.ax.get_yticklabels():
-    #     t.set_fontsize('xx-large')
+    cb_ax = fig.add_axes([.93, .15, .025, .7])
+    cbar = fig.colorbar(im, cax=cb_ax)
+    # cbar = fig.colorbar(im, orientation="horizontal", pad=0.2)
+    for t in cbar.ax.get_yticklabels():
+        t.set_fontsize('xx-large')
 
 plt.show()
