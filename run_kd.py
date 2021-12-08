@@ -26,7 +26,7 @@ def experiment(algorithm, tree):
 
 n_exp = 5
 n_trees = 5
-n_simulations = 10000
+n_simulations = 1000
 # n_simulations = 1000
 ks = [2, 4, 6, 8]
 # ks = [2, 4, 6, 8]

@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 
 n_exp = 5
 n_trees = 5
-n_simulations = 10000
+n_simulations = 1000
 k_heat = [2, 4, 6, 8]  # [50, 100, 200]
 d_heat = [1, 2, 3, 4, 5]  # [50, 100, 200]
 # k = [50, 50, 100, 100, 200, 200]
@@ -86,7 +86,6 @@ for kk, dd in zip(k, d):
 
     # plt.legend([alg.upper() for alg in algs], fontsize='xx-large', loc="upper center", bbox_to_anchor=(-0.3, -0.3), ncol=len(algs), frameon=False)
 
-
     for i in range(3):
         plt.subplot(3, len(k), count_plot + 1 + i * len(k))
         plt.grid()
@@ -95,7 +94,8 @@ for kk, dd in zip(k, d):
     count_plot += 1
 
 plt.subplot(3, len(k), 3 * len(k) - 2)
-plt.legend([alg.upper() for alg in algs], fontsize='xx-large', loc="upper center", bbox_to_anchor=(0.3, -0.3), ncol=len(algs), frameon=False)
+plt.legend([alg.upper() for alg in algs], fontsize='xx-large', loc="upper center",
+           bbox_to_anchor=(0.3, -0.3), ncol=len(algs), frameon=False)
 
 # HEATMAPS
 diff = np.load(folder_name + '/diff_heatmap.npy')

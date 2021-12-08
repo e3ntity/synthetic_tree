@@ -5,7 +5,7 @@ from scipy.stats import norm
 
 
 class MCTS:
-    def __init__(self, exploration_coeff, algorithm, tau, alpha, step_size,gamma, update_type):
+    def __init__(self, exploration_coeff, algorithm, tau, alpha, step_size, gamma, update_type):
         self._exploration_coeff = exploration_coeff
         self._algorithm = algorithm
         self._tau = tau
@@ -16,7 +16,6 @@ class MCTS:
 
     def run(self, tree_env, n_simulations):
         """Runs a given number of MCTS simulations on the tree environment, keeping track of root values and regret.
-
         Args:
             tree_env: The tree environment on which to run MCTS.
             n_simulations: The number of simulations to run.
@@ -70,7 +69,6 @@ class MCTS:
 
     def _simulation(self, tree_env):
         """Runs a single MCTS simulation on the tree.
-
         Args:
             tree_env: The tree environment on which to run.
         Returns:
@@ -89,10 +87,17 @@ class MCTS:
             if leaf_node['N'] == 1:
                 leaf_node['v_variance'] = 1./np.sqrt(12)
             else:
-                leaf_node['v_variance'] = (leaf_node['v_variance'] * leaf_node['N'] + (reward - leaf_node['v_mean'])**2) / (leaf_node['N'] + 1)
+                leaf_node['v_variance'] = (leaf_node['v_variance'] * leaf_node['N'] +
+                                           (reward - leaf_node['v_mean'])**2) / (leaf_node['N'] + 1)
+        elif self._algorithm == "dng":
+            leaf_node["alpha"] += .5
+            leaf_node["beta"] += .5 * (leaf_node["lambda"]*(reward - leaf_node["mu"])**2
+                                       / (leaf_node["lambda"] + 1))
+            leaf_node["mu"] = ((leaf_node["lambda"]*leaf_node["mu"] + reward)
+                               / (leaf_node["lambda"] + 1))
+            leaf_node["lambda"] += 1
 
         leaf_node['N'] += 1
-
 
         for step, e in enumerate(reversed(path)):
             current_node = tree_env.tree.nodes[e[0]]
@@ -146,7 +151,7 @@ class MCTS:
                 out_edges = [e for e in tree_env.tree.edges(e[0])]
                 qs = np.array(
                     [tree_env.tree[e[0]][e[1]]['Q'] for e in out_edges])
-                current_node['V'] = np.power(np.sum(np.power(qs,self._alpha)),self._alpha)
+                current_node['V'] = np.power(np.sum(np.power(qs, self._alpha)), self._alpha)
 
             elif self._algorithm == 'uct':
                 current_node['V'] = (current_node['V'] * current_node['N'] +
@@ -199,7 +204,6 @@ class MCTS:
 
     def _navigate(self, tree_env):
         """Navigates the tree from the root node until reaching a leaf node, using an algorithm-dependent select policy.
-
         Args:
             tree_env: The tree environment on which to operate.
         Returns:
@@ -216,7 +220,6 @@ class MCTS:
 
     def _select(self, tree_env, state):
         """Policy for selecting nodes of the tree.
-
         Args:
             tree_env: The tree environment on which to operate.
             state: The state in which to select an action.
@@ -236,7 +239,7 @@ class MCTS:
 
             prob = self._compute_prob_max(mean_next_all, variance_next_all)
 
-            chosen_action = np.random.choice(np.size(prob),1,p=prob)
+            chosen_action = np.random.choice(np.size(prob), 1, p=prob)
 
             return int(chosen_action[0])
 
@@ -282,9 +285,10 @@ class MCTS:
                 mu = tree_env.tree.nodes[edge[1]]["mu"]
                 alpha = tree_env.tree.nodes[edge[1]]["alpha"]
                 beta = tree_env.tree.nodes[edge[1]]["beta"]
+                ll = tree_env.tree.nodes[edge[1]]["lambda"]
 
-                tau = np.random.gamma(alpha, beta)
-                x = np.random.normal(mu, np.sqrt(1/tau))
+                tau = np.random.gamma(alpha, 1/beta)
+                x = np.random.normal(mu, np.sqrt(1/(ll*tau)))
 
                 qvalues.append(x)
             qvalues = np.array(qvalues)
