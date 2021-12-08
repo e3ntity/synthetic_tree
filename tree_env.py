@@ -32,7 +32,7 @@ class SyntheticTree:
 
             if algorithm == "w-mcts":
                 self._tree[e[0]][e[1]]['q_mean'] = 0.5
-                self._tree[e[0]][e[1]]['q_variance'] = 1/np.sqrt(12)
+                self._tree[e[0]][e[1]]['q_variance'] = 0.5
 
         for n in self._tree.nodes:
             self._tree.nodes[n]['N'] = 0
@@ -40,7 +40,7 @@ class SyntheticTree:
 
             if algorithm == "w-mcts":
                 self._tree.nodes[n]['v_mean'] = 0.5
-                self._tree.nodes[n]['v_variance'] = 1/np.sqrt(12)
+                self._tree.nodes[n]['v_variance'] = 0.5
             elif algorithm == "dng":
                 self._tree.nodes[n]["mu"] = 0.
                 self._tree.nodes[n]["lambda"] = 1e-2

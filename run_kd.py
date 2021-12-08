@@ -39,10 +39,10 @@ exploration_coeff = 1.41
 tau = .1
 alpha = .2
 gamma = 1.
-step_size = .2
-algorithms = {'uct': 'UCT', 'ments': 'MENTS', 'rents': 'RENTS', 'tents': 'TENTS', 'w-mcts': 'W-MCTS', 'dng': 'DNG'}
+step_size = .5
+# algorithms = {'uct': 'UCT', 'ments': 'MENTS', 'rents': 'RENTS', 'tents': 'TENTS', 'w-mcts': 'W-MCTS', 'dng': 'DNG'}
 
-# algorithms = {'w-mcts': 'W-MCTS'}
+algorithms = {'uct': 'UCT', 'w-mcts': 'W-MCTS', 'dng': 'DNG'}
 
 folder_name = './logs/expl_%.2f_tau_%.2f' % (exploration_coeff, tau)
 
