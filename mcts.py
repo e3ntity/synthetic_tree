@@ -113,7 +113,8 @@ class MCTS:
                 v_variance = next_node['v_variance']
 
                 t = tree_env.tree[e[0]][e[1]]['N']
-                _step_size = 1./np.power(t, self._step_size)
+                # _step_size = 1./np.power(t, self._step_size)
+                _step_size = 0
 
                 tree_env.tree[e[0]][e[1]]['q_mean'] = _step_size * q_mean + \
                     (1 - _step_size) * self._gamma * v_mean
@@ -234,29 +235,29 @@ class MCTS:
 
         if self._algorithm == 'w-mcts':
 
-            mean_next_all = np.array([tree_env.tree[e[0]][e[1]]['q_mean'] for e in out_edges])
-            variance_next_all = np.array([tree_env.tree[e[0]][e[1]]['q_variance'] for e in out_edges])
-
-            prob = self._compute_prob_max(mean_next_all, variance_next_all)
-
-            chosen_action = np.random.choice(np.size(prob), 1, p=prob)
-
-            return int(chosen_action[0])
-
-            # qvalues = []
-            # for edge in out_edges:
-            #     # Sample from normal gamma distribution
-            #     mu = tree_env.tree[edge[0]][edge[1]]['q_mean']
-            #     delta = tree_env.tree[edge[0]][edge[1]]['q_variance']
+            # mean_next_all = np.array([tree_env.tree[e[0]][e[1]]['q_mean'] for e in out_edges])
+            # variance_next_all = np.array([tree_env.tree[e[0]][e[1]]['q_variance'] for e in out_edges])
             #
-            #     x = np.random.normal(mu, delta)
+            # prob = self._compute_prob_max(mean_next_all, variance_next_all)
             #
-            #     qvalues.append(x)
-            # qvalues = np.array(qvalues)
+            # chosen_action = np.random.choice(np.size(prob),1,p=prob)
             #
-            # chosen_action = np.random.choice(np.argwhere(qvalues == np.max(qvalues)).ravel())
+            # return int(chosen_action[0])
+
+            qvalues = []
+            for edge in out_edges:
+                # Sample from normal gamma distribution
+                mu = tree_env.tree[edge[0]][edge[1]]['q_mean']
+                delta = tree_env.tree[edge[0]][edge[1]]['q_variance']
+
+                x = np.random.normal(mu, delta)
+
+                qvalues.append(x)
+            qvalues = np.array(qvalues)
+
+            chosen_action = np.random.choice(np.argwhere(qvalues == np.max(qvalues)).ravel())
             #
-            # return chosen_action
+            return chosen_action
             # current implementation is ucb
             # mean_array = np.array(
             #     [tree_env.tree[e[0]][e[1]]['q_mean'] for e in out_edges])

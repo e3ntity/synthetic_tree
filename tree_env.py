@@ -30,8 +30,8 @@ class SyntheticTree:
             self._tree[e[0]][e[1]]['N'] = 0
             self._tree[e[0]][e[1]]['Q'] = 0.
 
-            if algorithm == "w-mcts":
-                self._tree[e[0]][e[1]]['q_mean'] = 0.5
+            if algorithm == "w-mcts" or algorithm == "w-uct":
+                self._tree[e[0]][e[1]]['q_mean'] = 0.
                 self._tree[e[0]][e[1]]['q_variance'] = 0.5
 
         for n in self._tree.nodes:
@@ -39,7 +39,7 @@ class SyntheticTree:
             self._tree.nodes[n]['V'] = 0.
 
             if algorithm == "w-mcts":
-                self._tree.nodes[n]['v_mean'] = 0.5
+                self._tree.nodes[n]['v_mean'] = 0.
                 self._tree.nodes[n]['v_variance'] = 0.5
             elif algorithm == "dng":
                 self._tree.nodes[n]["mu"] = 0.
